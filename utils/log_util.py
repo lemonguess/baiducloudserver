@@ -1,9 +1,9 @@
-import logging
-import logging.handlers
-import colorlog
-import os, sys
+import os
+import sys
 import datetime
+import logging
 from concurrent_log_handler import ConcurrentRotatingFileHandler
+import colorlog
 
 LOGGING_CONF = {
     'formatters': {
@@ -40,7 +40,6 @@ LOGGING_CONF = {
     }
 }
 
-
 class Logger:
     def __init__(self, LOGGING=None):
         if LOGGING is None:
@@ -70,6 +69,15 @@ class Logger:
         return self.logger
 
     def get_base_dir(self):
+        # 按照正常的情况下, sys,path的最前面就是项目的根目录,
+        # 但是保险起见我们还是写了循环获取的代码
+        # 这里只循环到倒数第三个的原因是有的时候我们会在sys.path中进行插入当前路径的操作,
+        # 容易插入的层级超过了项目根目录, 但是如果是用insert在最前面, 那就无能为力了
+        # 注意一下这个问题就好
+        # if len(sys.path) >= 6:
+        #     sys_path_list = sys.path[:6]
+        # else:
+        #     sys_path_list = sys.path[:-2]
         sys_path_list = sys.path
         pwd = os.getcwd()
         path = pwd
@@ -81,26 +89,19 @@ class Logger:
     def set_file_handler(self):
         maxBytes = self.LOGGING['handlers'][self.name].get("maxBytes", 1024 * 1024 * 200)
         log_dir = "logs"  # 日志存放文件夹名称
-        # log_path = self.LOGGING['handlers'][self.name].get("log_path", sys.path[1]) + os.sep + log_dir
         log_path = self.LOGGING['handlers'][self.name].get("log_path", self.get_base_dir()) + os.sep + log_dir
         if not os.path.isdir(log_path):
             os.makedirs(log_path)
-        datetime_now = str(datetime.datetime.now())[:10]
-
+        # 获取当前日期并转换为字符串格式
+        current_date = datetime.datetime.now().strftime('%Y-%m-%d')
         for leval in ["ERROR", "INFO", "DEBUG"]:
-            # 设置handler
-            # handler_f = logging.FileHandler(filename=file_name, mode='a', encoding='utf-8')
-            # 安照日志文件大小切割，超过*M时切割，最多保留10个日志文件
             handler_f = ConcurrentRotatingFileHandler(
-                filename=log_path + os.sep + ('all-%s.log' % datetime_now if leval == "DEBUG" else (
-                            leval.lower() + '-%s.log' % datetime_now)),
+                filename=log_path + os.sep + ('all-%s.log' % current_date if leval == "DEBUG" else (
+                            leval.lower() + '-%s.log' % current_date)),
                 mode='a', encoding='utf-8', maxBytes=maxBytes,
                 backupCount=5)
-            # 设置日志级别
             handler_f.setLevel(leval)
-            # 设置格式化
             handler_f.setFormatter(self.formatter)
-            # 添加 handler
             baseFilenames = []
             for h in self.logger.handlers:
                 try:
@@ -139,12 +140,10 @@ class Logger:
         logger = self._init()
         return logger
 
-
 if __name__ == '__main__':
-    logger = Logger().get_logger('log', 'mysql')
+    # logger = Logger().get_logger('log', 'mysql')
 
-
-    # logger = Logger().get_logger('log')
+    logger = Logger().get_logger('log')
     def t2():
         logger.warning('222')
         logger.info('111')
@@ -153,6 +152,4 @@ if __name__ == '__main__':
             int('abc')
         except Exception as e:
             logger.exception(e)
-
-
     t2()

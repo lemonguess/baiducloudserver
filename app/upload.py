@@ -26,7 +26,7 @@ class BaiduUpload:
     def __init__(self, **kwargs):
         self.remote_path = kwargs.get("remote_path")
         self.file_path = kwargs.get("file_path")
-        self.access_token = "121.9e0c308cf787c62576144c588201b4ae.YGVefo2fL-cKOtmLHwxyn4ZCime2I2LfGXE-2HQ.Gbci_Q"
+        self.access_token = "121.36d1135ce89315f9d11e192c62010ab9.YmTOnTe9UekS6FinDzzggwGjcXn_w8Rj58MYsGQ.4DrvQg"
         self.isdir = 0
         self.uploadid = ""
         self.block_list = ""
@@ -53,6 +53,8 @@ class BaiduUpload:
         self.precreate()
         self.upload()
         self.create()
+
+
     @staticmethod
     def _md5(data):
         return hashlib.md5(data).hexdigest()
@@ -147,10 +149,42 @@ class BaiduUpload:
                 logger.info(api_response)
             except openapi_client.ApiException as e:
                 logger.error("Exception when calling FileuploadApi->xpanfilecreate: %s\n" % e)
+
+def delwith_dir(folder_path):
+    folder_path_list = []
+    def print_relative_paths(folder_path, parent_path=""):
+        for item in os.listdir(folder_path):
+            item_path = os.path.join(folder_path, item)
+            relative_path = os.path.join(parent_path, item)
+
+            if os.path.isfile(item_path):
+                folder_path_list.append(relative_path)
+                # print(relative_path)
+                # print(folder_path_list)
+            elif os.path.isdir(item_path):
+                print_relative_paths(item_path, relative_path)
+
+    # 示例用法
+    # folder_path = '../demo/uploadtestdata/'  # 替换为你要遍历的文件夹路径
+    print_relative_paths(folder_path)
+    return folder_path_list
+def upload(file_path, remote_path, isdir):
+    if isdir == 0:
+        BaiduUpload(file_path=file_path, remote_path=remote_path).main()
+    else:
+        file_list = delwith_dir(folder_path=file_path)
+        file_path_list = [file_path + i for i in file_list]
+        remote_path = [remote_path + i for i in file_list]
+        path_zip_list = list(zip(file_path_list, remote_path))
+        # print(path_zip_list)
+        for path_zip in path_zip_list:
+            BaiduUpload(file_path=path_zip[0],
+                        remote_path=path_zip[1]).main()
 if __name__ == '__main__':
     # 小于 4M 的文件测试
     # BaiduUpload(file_path='../demo/uploadtestdata/a.txt', remote_path='/apps/数据库备份/文档测试/c.txt').main()
     # 大于 4M 的文件测试
-    # BaiduUpload(file_path=r'../demo/uploadtestdata/uninstall.exe', remote_path='/apps/数据库备份/文档测试/uninstall.exe').main()
+    # BaiduUpload(file_path=r'../demo/uploadtestdata/uninstall.exe', remote_path='/apps/数据备份/uninstall.exe').main()
     # 文件夹 上传测试
-    BaiduUpload(file_path=r'../demo/uploadtestdata/', remote_path='/apps/数据库备份/文档测试/uploadtestdata', isdir=1).main()
+    # BaiduUpload(file_path=r'../demo/uploadtestdata/', remote_path='/apps/数据库备份/uploadtestdata/', isdir=1).main()
+    upload(file_path=r'../demo/uploadtestdata/', remote_path='/apps/数据备份/uploadtestdata/', isdir=1)
